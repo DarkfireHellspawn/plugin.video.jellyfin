@@ -130,7 +130,7 @@ class ConnectionManager(object):
         self.config['auth.token'] = None
 
     def get_available_servers(self):
-        
+
         LOG.info("Begin getAvailableServers")
 
         # Clone the credentials
@@ -217,7 +217,7 @@ class ConnectionManager(object):
             return False
         else:
             self._on_authenticated(result, options)
-        
+
         return result
 
     def connect_to_address(self, address, options={}):
@@ -255,8 +255,8 @@ class ConnectionManager(object):
         tests = []
 
         if server.get('LastConnectionMode') is not None:
-            #tests.append(server['LastConnectionMode'])
-            pass
+            tests.append(server['LastConnectionMode'])
+
         if CONNECTION_MODE['Manual'] not in tests:
             tests.append(CONNECTION_MODE['Manual'])
         if CONNECTION_MODE['Local'] not in tests:
@@ -296,7 +296,7 @@ class ConnectionManager(object):
             return {}
 
         servers = self.credentials.get_credentials()['Servers']
-        
+
         for server in servers:
             if server['Id'] == server_id:
                 return server
@@ -326,7 +326,7 @@ class ConnectionManager(object):
         return "%s/%s" % (self.config['app.name'], self.config['app.version'])
 
     def _get_headers(self, request):
-        
+
         headers = request.setdefault('headers', {})
 
         if request.get('dataType') == "json":
@@ -359,7 +359,7 @@ class ConnectionManager(object):
         if first_server is not None and first_server['DateLastAccessed'] != "2001-01-01T00:00:00Z":
             result = self.connect_to_server(first_server, options)
 
-            if result['State'] == CONNECTION_STATE['SignedIn']:
+            if result['State'] in (CONNECTION_STATE['SignedIn'], CONNECTION_STATE['Unavailable']):
                 return result
 
         # Return loaded credentials if exists
@@ -419,7 +419,7 @@ class ConnectionManager(object):
 
         try:
             result = self._try_connect(address, timeout, options)
-        
+
         except Exception:
             LOG.error("test failed for connection mode %s with server %s", mode, server.get('Name'))
 
@@ -444,7 +444,7 @@ class ConnectionManager(object):
         credentials = self.credentials.get_credentials()
 
         if credentials.get('ConnectAccessToken') and options.get('enableAutoLogin') is not False:
-            
+
             if self._ensure_connect_user(credentials) is not False:
 
                 if server.get('ExchangeToken'):
@@ -466,32 +466,8 @@ class ConnectionManager(object):
         return self.min_server_version
 
     def _compare_versions(self, a, b):
-
-        ''' -1 a is smaller
-            1 a is larger
-            0 equal
-        '''
-        a = a.split('.')
-        b = b.split('.')
-
-        for i in range(0, max(len(a), len(b)), 1):
-            try:
-                aVal = a[i]
-            except IndexError:
-                aVal = 0
-
-            try:    
-                bVal = b[i]
-            except IndexError:
-                bVal = 0
-
-            if aVal < bVal:
-                return -1
-
-            if aVal > bVal:
-                return 1
-
         return 0
+
 
     def _string_equals_ignore_case(self, str1, str2):
         return (str1 or "").lower() == (str2 or "").lower()
@@ -514,10 +490,10 @@ class ConnectionManager(object):
         })
 
     def _server_discovery(self):
-        
+
         MULTI_GROUP = ("<broadcast>", 7359)
         MESSAGE = "who is EmbyServer?"
-        
+
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.settimeout(1.0) # This controls the socket.timeout exception
 
@@ -525,7 +501,7 @@ class ConnectionManager(object):
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         sock.setsockopt(socket.SOL_IP, socket.IP_MULTICAST_LOOP, 1)
         sock.setsockopt(socket.IPPROTO_IP, socket.SO_REUSEADDR, 1)
-        
+
         LOG.debug("MultiGroup      : %s", str(MULTI_GROUP))
         LOG.debug("Sending UDP Data: %s", MESSAGE)
 
@@ -541,11 +517,11 @@ class ConnectionManager(object):
             try:
                 data, addr = sock.recvfrom(1024) # buffer size
                 servers.append(json.loads(data))
-            
+
             except socket.timeout:
                 LOG.info("Found Servers: %s", servers)
                 return servers
-            
+
             except Exception as e:
                 LOG.error("Error trying to find servers: %s", e)
                 return servers
@@ -553,7 +529,7 @@ class ConnectionManager(object):
     def _get_connect_servers(self, credentials):
 
         LOG.info("Begin getConnectServers")
-        
+
         servers = list()
 
         if not credentials.get('ConnectAccessToken') or not credentials.get('ConnectUserId'):
@@ -625,7 +601,7 @@ class ConnectionManager(object):
             return servers
 
     def _filter_servers(self, servers, connect_servers):
-        
+
         filtered = list()
         for server in servers:
             if server.get('ExchangeToken') is None:
@@ -641,7 +617,7 @@ class ConnectionManager(object):
         return filtered
 
     def _convert_endpoint_address_to_manual_address(self, info):
-        
+
         if info.get('Address') and info.get('EndpointAddress'):
             address = info['EndpointAddress'].split(':')[0]
 
@@ -758,7 +734,7 @@ class ConnectionManager(object):
 
             self.config['auth.user_id'] = server.pop('UserId', None)
             self.config['auth.token'] = server.pop('AccessToken', None)
-        
+
         elif verify_authentication and server.get('AccessToken'):
 
             if self._validate_authentication(server, connection_mode, options) is not False:

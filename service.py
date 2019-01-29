@@ -4,6 +4,7 @@
 
 import logging
 import os
+import threading
 import sys
 
 import xbmc
@@ -35,9 +36,42 @@ from emby import Emby
 #################################################################################################
 
 LOG = logging.getLogger("EMBY.service")
-DELAY = int(settings('startupDelay') or 0)
+DELAY = int(settings('startupDelay') if settings('SyncInstallRunDone.bool') else 4 or 0)
 
 #################################################################################################
+
+
+class ServiceManager(threading.Thread):
+
+    ''' Service thread. 
+        To allow to restart and reload modules internally. 
+    '''
+    exception = None
+
+    def __init__(self):
+        threading.Thread.__init__(self)
+
+    def run(self):
+        service = None
+
+        try:
+            service = Service()
+
+            if DELAY and xbmc.Monitor().waitForAbort(DELAY):
+                raise Exception("Aborted during startup delay")
+
+            service.service()
+        except Exception as error:
+
+            if service is not None:
+
+                if not 'ExitService' in error:
+                    service.shutdown()
+                
+                if 'RestartService' in error:
+                    service.reload_objects()
+
+            self.exception = error
 
 
 if __name__ == "__main__":
@@ -47,28 +81,23 @@ if __name__ == "__main__":
 
     while True:
 
+        if not settings('enableAddon.bool'):
+            LOG.warn("Emby for Kodi is not enabled.")
+
+            break
+
         try:
-            session = Service()
+            session = ServiceManager()
+            session.start()
+            session.join() # Block until the thread exits.
 
-            try:
-                if DELAY and xbmc.Monitor().waitForAbort(DELAY):
-                    raise Exception("Aborted during startup delay")
-
-                session.service()
-            except Exception as error: # TODO, build exceptions
-
-                LOG.exception(error)
-                session.shutdown()
-
-                if 'RestartService' in error:
-                    continue
+            if 'RestartService' in session.exception:
+                continue
 
         except Exception as error:
             ''' Issue initializing the service.
             '''
             LOG.exception(error)
-
-            break
 
         break
 

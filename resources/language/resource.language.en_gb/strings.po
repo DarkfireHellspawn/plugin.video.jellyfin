@@ -223,7 +223,7 @@ msgid "Verify connection"
 msgstr ""
 
 msgctxt "#30504"
-msgid "Use altername device name"
+msgid "Use alternate device name"
 msgstr ""
 
 msgctxt "#30506"
@@ -920,4 +920,32 @@ msgstr ""
 
 msgctxt "#33188"
 msgid "Would you like to sync Rotten Tomatoes ratings?"
+msgstr ""
+
+msgctxt "#33191"
+msgid "Restart Emby for Kodi to apply this change?"
+msgstr ""
+
+msgctxt "#33192"
+msgid "Restart Emby for Kodi"
+msgstr ""
+
+msgctxt "#33193"
+msgid "Restarting..."
+msgstr ""
+
+msgctxt "#33194"
+msgid "Manage libraries"
+msgstr ""
+
+msgctxt "#33195"
+msgid "Enable Emby for Kodi"
+msgstr ""
+
+msgctxt "#33196"
+msgid "Advanced options"
+msgstr ""
+
+msgctxt "#33197"
+msgid "A sync is already running, please wait until it completes and try again."
 msgstr ""

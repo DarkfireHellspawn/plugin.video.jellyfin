@@ -67,7 +67,7 @@ class PlayUtils(object):
             'ServerId': server_id,
             'ServerAddress': server,
             'ForceTranscode': force_transcode,
-            'Token': token or TheVoid('GetToken', {'ServerId': server_id}).get() 
+            'Token': token or TheVoid('GetToken', {'ServerId': server_id}).get()
         }
 
     def get_sources(self, source_id=None):
@@ -118,7 +118,7 @@ class PlayUtils(object):
             if resp > -1:
                 source = sources[resp]
             else:
-                log.info("No media source selected.")
+                LOG.info("No media source selected.")
                 return False
         else:
             source = sources[0]
@@ -168,7 +168,7 @@ class PlayUtils(object):
 
     def is_strm(self, source):
 
-        if source['Container'] == 'strm' or self.item['Path'].endswith('.strm'):
+        if source.get('Container') == 'strm' or self.item['Path'].endswith('.strm'):
             LOG.info("strm detected")
 
             return True
@@ -189,6 +189,11 @@ class PlayUtils(object):
             self.info['LiveStreamId'] = source['LiveStreamId']
             source['SupportsDirectPlay'] = False
             source['Protocol'] = "LiveTV"
+
+        if self.info['ForceTranscode']:
+
+            source['SupportsDirectPlay'] = False
+            source['SupportsDirectStream'] = False
 
         if source.get('Protocol') == 'Http' or source['SupportsDirectPlay'] and (self.is_strm(source) or not settings('playFromStream.bool') and self.is_file_exists(source)):
 
@@ -231,7 +236,7 @@ class PlayUtils(object):
         return info['MediaSource']
 
     def transcode(self, source, audio=None, subtitle=None):
-        
+
         if not 'TranscodingUrl' in source:
             raise Exception("use get_sources to get transcoding url")
 
@@ -259,7 +264,7 @@ class PlayUtils(object):
         return self.info['Path']
 
     def direct_play(self, source):
-        
+
         API = api.API(self.item, self.info['ServerAddress'])
         self.info['Method'] = "DirectPlay"
         self.info['Path'] = API.get_file_path(source.get('Path'))
@@ -267,13 +272,13 @@ class PlayUtils(object):
         return self.info['Path']
 
     def direct_url(self, source):
-        
+
         self.info['Method'] = "DirectStream"
 
         if self.item['Type'] == "Audio":
             self.info['Path'] = ("%s/emby/Audio/%s/stream.%s?static=true&api_key=%s" %
                                 (self.info['ServerAddress'], self.item['Id'],
-                                 source['Container'].split(',')[0],
+                                 source.get('Container', "mp4").split(',')[0],
                                  self.info['Token']))
         else:
             self.info['Path'] = ("%s/emby/Videos/%s/stream?static=true&MediaSourceId=%s&api_key=%s" %
@@ -295,7 +300,7 @@ class PlayUtils(object):
 
     def get_resolution(self):
         return int(xbmc.getInfoLabel('System.ScreenWidth')), int(xbmc.getInfoLabel('System.ScreenHeight'))
-    
+
     def get_device_profile(self):
 
         ''' Get device profile based on the add-on settings.
@@ -417,6 +422,7 @@ class PlayUtils(object):
             profile['CodecProfiles'].append(
                 {
                     'Type': 'Video',
+                    'codec': 'h264',
                     'Conditions': [
                         {
                             'Condition': "LessThanEqual",
@@ -460,10 +466,10 @@ class PlayUtils(object):
 
         for stream in source['MediaStreams']:
 
-            if stream['Type'] == 'Subtitle' and stream['IsExternal'] and stream['IsTextSubtitleStream']:
+            if stream['Type'] == 'Subtitle' and stream['IsExternal']:
                 index = stream['Index']
 
-                if 'DeliveryUrl' in stream and stream['DeliveryUrl'].lower().startswith('http'):
+                if 'DeliveryUrl' in stream and stream['DeliveryUrl'].lower().startswith('/videos'):
                     url = "%s/emby%s" % (self.info['ServerAddress'], stream['DeliveryUrl'])
                 else:
                     url = self.get_subtitles(source, stream, index)
@@ -619,7 +625,7 @@ class PlayUtils(object):
 
     def get_subtitles(self, source, stream, index):
 
-        if 'DeliveryUrl' in stream and stream['DeliveryUrl'].lower().startswith('http'):
+        if stream['IsTextSubtitleStream'] and 'DeliveryUrl' in stream and stream['DeliveryUrl'].lower().startswith('/videos'):
             url = "%s/emby%s" % (self.info['ServerAddress'], stream['DeliveryUrl'])
         else:
             url = ("%s/emby/Videos/%s/%s/Subtitles/%s/Stream.%s?api_key=%s" %

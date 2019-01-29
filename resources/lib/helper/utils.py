@@ -17,7 +17,6 @@ import xbmcgui
 import xbmcvfs
 
 from . import _
-from libraries.dateutil import tz, parser
 
 #################################################################################################
 
@@ -52,7 +51,7 @@ def window(key, value=None, clear=False, window_id=10000):
             key = key.replace('.bool', "")
             value = "true" if value else "false"
 
-        window.setProperty(key.replace('.json', "").replace('.bool', ""), value)
+        window.setProperty(key, value)
     else:
         result = window.getProperty(key.replace('.json', "").replace('.bool', ""))
 
@@ -450,14 +449,15 @@ def convert_to_local(date):
 
     ''' Convert the local datetime to local.
     '''
-    date = convert_str_to_date(date) if type(date) in (unicode, str) else date
-    date = date.replace(tzinfo=tz.tzutc())
-    date = date.astimezone(tz.tzlocal())
+    from libraries.dateutil import tz, parser
 
-    return date.strftime('%Y-%m-%dT%H:%M:%S')
+    try:
+        date = parser.parse(date) if type(date) in (unicode, str) else date
+        date = date.replace(tzinfo=tz.tzutc())
+        date = date.astimezone(tz.tzlocal())
 
-def convert_str_to_date(date):
+        return date.strftime('%Y-%m-%dT%H:%M:%S')
+    except Exception as error:
+        LOG.error(error)
 
-    ''' Convert string to date.
-    '''
-    return parser.parse(date)
+        return str(date)
